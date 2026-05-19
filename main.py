@@ -5,6 +5,26 @@ import sys
 import string
 sys.setrecursionlimit(10**6)
 
+IntList : TypeAlias = Optional['ILNode']
+
+WordLinesList : TypeAlias = Optional['WordLines']
+
+HashTable : TypeAlias = Literal['Hash']
+
+@dataclass(frozen=True)
+class ILNode:
+    first : int
+    rest  : IntList
+
+class WordLines:
+    key : str
+    value : IntList
+
+class Hash:
+    array : list[WordLinesList]
+    count : int
+
+
 # Return the hash code of 's' (see assignment description).
 def hash_fn(s: str) -> int:
     pass
