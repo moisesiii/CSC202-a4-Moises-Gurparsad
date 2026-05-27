@@ -5,24 +5,28 @@ import sys
 import string
 sys.setrecursionlimit(10**6)
 
-IntList : TypeAlias = Optional['ILNode']
-
-WordLinesList : TypeAlias = Optional['WordLines']
-
-HashTable : TypeAlias = Literal['Hash']
 
 @dataclass(frozen=True)
 class ILNode:
     first : int
     rest  : IntList
 
+@dataclass
 class WordLines:
     key : str
     value : IntList
+    rest : WordLinesList = None
 
+@dataclass
 class Hash:
     array : list[WordLinesList]
     count : int
+
+IntList : TypeAlias = Optional['ILNode']
+
+WordLinesList : TypeAlias = Optional['WordLines']
+
+HashTable : TypeAlias = Hash
 
 
 # Return the hash code of 's' (see assignment description).
@@ -42,41 +46,164 @@ def hash_size(ht: HashTable) -> int:
 def hash_count(ht: HashTable) -> int:
     pass
 
-# Gurparsad (these four)
-
 # Return whether 'ht' contains a mapping for the given 'word'.
 def has_key(ht: HashTable, word: str) -> bool:
     pass
 
+
+
+# Gurparsad (this half) ------------------------------------------------------------------------
+
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def lookup(ht: HashTable, word: str) -> List[int]:
-    pass
+    # bin_idx = hash num % # of bins
+    bin_idx = hash_fn(word) % hash_size(ht) 
+    current = ht.array[bin_idx]  # the current node
+    
+    while current is not None:
+        if current.key == word:
+            return lookup_helper(current.value)
+        current = current.rest
+    return []
+
+# Converts 'nums' to a simple array of integers.
+def lookup_helper(nums: IntList) -> List[int]:
+    result = []
+
+    while nums is not None:
+        result.append(nums.first)
+        nums = nums.rest
+    return result
+    
 
 # Record in 'ht' that 'word' has an occurrence on line 'line'.
 def add(ht: HashTable, word: str, line: int) -> None:
-    pass
+    bin_idx = hash_fn(word) % hash_size(ht)
+    current = ht.array[bin_idx]
+
+    while current is not None:
+        if current.key == word:
+            if not intlist_contains(current.value, line):
+                current.value = ILNode(line, current.value)
+            return
+
+        current = current.rest
+
+    new_node = WordLines(word, ILNode(line, None), ht.array[bin_idx])
+    ht.array[bin_idx] = new_node
+    ht.count += 1
+
+def intlist_contains(nums: IntList, line: int) -> bool:
+    while nums is not None:
+        if nums.first == line:
+            return True
+        nums = nums.rest
+    return False
 
 # Return the words that have mappings in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
 def hash_keys(ht: HashTable) -> List[str]:
-    pass
+    result = []
+
+    for bin in ht.array:
+        current = bin
+
+        while current is not None:
+            result.append(current.key)
+            current = current.rest
+
+    return result
 
 # Given a hash table 'stop_words' containing stop words as keys, plus
 # a sequence of strings 'lines' representing the lines of a document,
 # return a hash table representing a concordance of that document.
 def make_concordance(stop_words: HashTable, lines: List[str]) -> HashTable:
-    pass
+    ht = make_hash(128)
+    
+    line_num = 1
+
+    for line in lines: 
+        line = line.replace("'", "")
+
+        for punc in string.punctuation:
+            line = line.replace(punc, " ")
+
+        line = line.lower()
+
+        words = line.split()
+
+        for word in words:
+            if word.isalpha() and not has_key(stop_words, word):
+                add(ht, word, line_num)
+
+        line_num += 1
+
+    return ht
 
 # Given an input file path, a stop-words file path, and an output file path,
 # overwrite the indicated output file with a sorted concordance of the input file.
 def full_concordance(in_file: str, stop_words_file: str, out_file: str) -> None:
-    pass
+
+    stop_words = make_hash(128)
+
+    with open(stop_words_file, "r") as f:
+        for line in f:
+            word = line.strip().lower()
+
+            if word != "":
+                add(stop_words, word, 0)
+
+    with open(in_file, "r") as f:
+        lines = f.readlines()
+
+    concordance = make_concordance(stop_words, lines)
+
+    words = hash_keys(concordance)
+    words.sort()
+
+    with open(out_file, "w") as f:
+        for word in words:
+            nums = lookup(concordance, word)
+
+            line = word + ": " + " ".join(str(n) for n in nums)
+
+            f.write(line + "\n")
 
 
 class Tests(unittest.TestCase):
-    pass
+    def test_lookup_missing(self):
+        ht = make_hash(128)
+        self.assertEqual(lookup(ht, "cat"), [])
+
+    def test_add_lookup_one(self):
+        ht = make_hash(128)
+        add(ht, "cat", 3)
+        self.assertEqual(lookup(ht, "cat"), [3])
+
+    def test_add_no_duplicate_line(self):
+        ht = make_hash(128)
+        add(ht, "cat", 3)
+        add(ht, "cat", 3)
+        self.assertEqual(lookup(ht, "cat"), [3])
+
+    def test_hash_keys(self):
+        ht = make_hash(128)
+        add(ht, "cat", 1)
+        add(ht, "dog", 2)
+        self.assertEqual(sorted(hash_keys(ht)), ["cat", "dog"])
+
+    def test_make_concordance(self):
+        stop = make_hash(128)
+        add(stop, "the", 0)
+
+        lines = ["The cat, cat!", "Dog's cat"]
+        ht = make_concordance(stop, lines)
+
+        self.assertEqual(sorted(lookup(ht, "cat")), [1, 2])
+        self.assertEqual(lookup(ht, "dogs"), [2])
+        self.assertEqual(lookup(ht, "the"), [])
 
 
 if (__name__ == '__main__'):
-unittest.main()
+    unittest.main()
