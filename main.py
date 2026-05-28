@@ -4,10 +4,10 @@ import unittest
 import sys
 import string
 sys.setrecursionlimit(10**6)
+
 IntList : TypeAlias = Optional['ILNode']
 
 WordLinesList : TypeAlias = Optional['WordLines']
-
 
 
 @dataclass(frozen=True)
@@ -25,6 +25,7 @@ class WordLines:
 class Hash:
     array : list[WordLinesList]
     count : int
+
 
 HashTable : TypeAlias = Hash
 
@@ -66,10 +67,6 @@ def has_key(ht: HashTable, word: str) -> bool:
     index = hash_fn(word) % hash_size(ht)
     return has_key_in_list(ht.array[index], word)
     
-
-
-
-# Gurparsad (this half) ------------------------------------------------------------------------
 
 # Return the line numbers associated with the key 'word' in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
@@ -117,6 +114,7 @@ def intlist_contains(nums: IntList, line: int) -> bool:
             return True
         nums = nums.rest
     return False
+
 
 # Return the words that have mappings in 'ht'.
 # The returned list should not contain duplicates, but need not be sorted.
